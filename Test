@@ -1,0 +1,161 @@
+# prompt: vytvor niečo zaujímavé čím sa viem odprezentovať na pohovore ako junior AI konzultant čo by som mal vedieť dokázať naprogramovať
+
+# Install TensorFlow if you haven't already
+!pip install tensorflow
+
+import tensorflow as tf
+from tensorflow import keras
+import matplotlib.pyplot as plt
+import numpy as np
+
+print(f"TensorFlow version: {tf.__version__}")
+print(f"Keras version: {keras.__version__}")
+
+# --- Projekt pre prezentáciu na pohovore: Klasifikácia obrázkov (Fashion MNIST) ---
+# Tento projekt ukazuje základné kroky pri budovaní a trénovaní neurónovej siete
+# na klasifikáciu obrázkov, čo sú kľúčové schopnosti pre junior AI konzultanta.
+# Demonštruje:
+# 1. Načítanie a predprípravu dát.
+# 2. Stavbu konvolučnej neurónovej siete (CNN).
+# 3. Trénovanie modelu.
+# 4. Vyhodnotenie výkonu modelu.
+# 5. Vizualizáciu výsledkov (voliteľné).
+
+# 1. Načítanie dát Fashion MNIST
+# Fashion MNIST je dataset 70,000 obrázkov módnych doplnkov a oblečenia (60,000 tréningových, 10,000 testovacích).
+# Každý obrázok má rozlíšenie 28x28 pixelov v odtieňoch šedej.
+print("Načítavam dataset Fashion MNIST...")
+(train_images, train_labels), (test_images, test_labels) = keras.datasets.fashion_mnist.load_data()
+
+# Definícia názvov tried (labels)
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+print(f"Počet tréningových obrázkov: {train_images.shape[0]}")
+print(f"Rozmery tréningových obrázkov: {train_images.shape[1:]}")
+print(f"Počet testovacích obrázkov: {test_images.shape[0]}")
+print(f"Rozmery testovacích obrázkov: {test_images.shape[1:]}")
+
+# 2. Predpríprava dát
+# Pixelové hodnoty sú v rozsahu 0-255. Normalizujeme ich na rozsah 0-1.
+# Pre CNN model potrebujeme obrázky s dodatočným rozmerom pre kanály (grayscale má 1 kanál).
+print("Predpripravujem dáta...")
+train_images = train_images / 255.0
+test_images = test_images / 255.0
+
+# Pre CNN: pridáme rozmer kanála (posledný rozmer)
+train_images = train_images[..., np.newaxis]
+test_images = test_images[..., np.newaxis]
+
+# Voliteľné: Zobrazenie prvého obrázku a jeho triedy
+# plt.figure()
+# plt.imshow(train_images[0][:,:,0], cmap=plt.cm.binary)
+# plt.colorbar()
+# plt.grid(False)
+# plt.title(f"Príklad obrázku: {class_names[train_labels[0]]}")
+# plt.show()
+
+# 3. Stavba modelu konvolučnej neurónovej siete (CNN)
+# CNN sú vhodné pre spracovanie obrázkov.
+print("Staviam model CNN...")
+model = keras.Sequential([
+    # Konvolučná vrstva: aplikuje filtre na extrakciu prvkov
+    keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    # Max Pooling vrstva: zmenšuje rozmer a zachytáva najdôležitejšie prvky
+    keras.layers.MaxPooling2D((2, 2)),
+    # Ďalšia konvolučná vrstva
+    keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    # Ďalšia Max Pooling vrstva
+    keras.layers.MaxPooling2D((2, 2)),
+    # Sploštenie (Flatten): prevedie 2D mapy prvkov na 1D vektor pre plne prepojené vrstvy
+    keras.layers.Flatten(),
+    # Plne prepojená (Dense) vrstva: skryté neuróny
+    keras.layers.Dense(128, activation='relu'),
+    # Výstupná vrstva: 10 neurónov (pre každú triedu), softmax pre pravdepodobnostnú distribúciu
+    keras.layers.Dense(10, activation='softmax')
+])
+
+# Prehľad modelu
+model.summary()
+
+# 4. Kompilácia modelu
+# Definujeme optimalizátor, stratu (loss function) a metriky na vyhodnotenie.
+print("Kompilujem model...")
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+              metrics=['accuracy'])
+
+# 5. Trénovanie modelu
+# Model trénujeme na tréningových dátach (train_images, train_labels).
+# `epochs` určuje, koľkokrát model prejde celý tréningový dataset.
+# Pridáme validation_data pre sledovanie výkonu na neviditeľných dátach počas tréningu.
+print("Trénujem model (môže trvať niekoľko minút na CPU)...")
+history = model.fit(train_images, train_labels, epochs=10,
+                    validation_data=(test_images, test_labels))
+
+# 6. Vyhodnotenie modelu
+# Vyhodnotíme výkon modelu na testovacom datasete.
+print("Vyhodnocujem model na testovacích dátach...")
+test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+
+print(f'\nPresnosť na testovacích dátach: {test_acc*100:.2f}%')
+
+# 7. Voliteľné: Vizualizácia predikcií
+# Zobrazenie niekoľkých testovacích obrázkov a predikcie modelu
+print("Zobrazujem niekoľko predikcií:")
+predictions = model.predict(test_images)
+
+def plot_image(i, predictions_array, true_label, img):
+  true_label, img = true_label[i], img[i]
+  plt.grid(False)
+  plt.xticks([])
+  plt.yticks([])
+
+  plt.imshow(img[:,:,0], cmap=plt.cm.binary)
+
+  predicted_label = np.argmax(predictions_array)
+  color = 'blue' if predicted_label == true_label else 'red'
+
+  plt.xlabel(f"{class_names[predicted_label]} ({100*np.max(predictions_array):.2f}%) ({class_names[true_label]})",
+             color=color)
+
+def plot_value_array(i, predictions_array, true_label):
+  true_label = true_label[i]
+  plt.grid(False)
+  plt.xticks(range(10))
+  plt.yticks([])
+  thisplot = plt.bar(range(10), predictions_array, color="#777777")
+  plt.ylim([0, 1])
+  predicted_label = np.argmax(predictions_array)
+
+  thisplot[predicted_label].set_color('red')
+  thisplot[true_label].set_color('blue')
+
+# Plot the first X test images, their predicted labels, and the true labels.
+# Color correct predictions in blue and incorrect predictions in red.
+num_rows = 5
+num_cols = 3
+num_images = num_rows*num_cols
+plt.figure(figsize=(2*2*num_cols, 2*num_rows))
+for i in range(num_images):
+  plt.subplot(num_rows, 2*num_cols, 2*i+1)
+  plot_image(i, predictions[i], test_labels, test_images)
+  plt.subplot(num_rows, 2*num_cols, 2*i+2)
+  plot_value_array(i, predictions[i], test_labels)
+plt.tight_layout()
+plt.show()
+
+# --- Záver pre pohovor ---
+# Tento projekt demonštruje moju schopnosť:
+# - Pracovať s dátami (načítanie, predpríprava).
+# - Vytvárať a konfigurovať modely hlbokého učenia (CNN v Keras/TensorFlow).
+# - Trénovať modely na datasetoch.
+# - Vyhodnocovať výkon modelu pomocou relevantných metrík (presnosť).
+# Tieto kroky sú základom mnohých úloh v oblasti AI/ML a sú dôležité pre pozíciu AI konzultanta,
+# kde je často potrebné porozumieť technickým detailom riešení a vysvetliť ich klientovi.
+# Viem rozširovať tento projekt o ďalšie aspekty ako napr.
+# - Zmena architektúry modelu (viac vrstiev, iné typy vrstiev).
+# - Použitie iných optimalizátorov alebo stratových funkcií.
+# - Techniky na zabránenie preučeniu (overfitting), napr. Dropout.
+# - Vizualizácia tréningového procesu a metrík.
+# - Práca s inými typmi dát a problémami (napr. regresia, spracovanie textu).
